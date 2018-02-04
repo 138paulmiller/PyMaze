@@ -48,7 +48,7 @@ class DisjointSet:
 		'''
 		Finds a given element in the tree by the key.
 		@params 
-			key : id of the element
+			key(hashable) : id of the element
 		@return
 			Element : root of the set which contains element with the key
 		'''
@@ -64,12 +64,13 @@ class DisjointSet:
 	def union(self, element_a, element_b):
 		'''
 		Creates a new set that contains all elements in both element_a and element_b's sets
+		Pass into union the Elements returned by the find operation
 		@params 
-			element_a : Element of set a
-			element_b : Element of set b
+			element_a(Element) : Element or key of set a
+			element_b(Element) : Element of set b
 		@return
 			None
-		'''
+		''' 
 		root_a = self.find(element_a.key)
 		root_b = self.find(element_b.key)
 		# if not in the same subtree (set)
