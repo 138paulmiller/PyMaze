@@ -54,8 +54,8 @@ The following generates two files, MyMaze_maze.txt and MyMaze_portals.txt, which
 
 		./maze.pys -width 50 -height 45 -seed 13.1 -out MyMaze
 
-This will start the interactive maze in the terminal 	
+This will start the interactive 15 by 15 maze in the terminal 	
 
-		./maze.py -interactive	
+		./maze.py -interactive -width 15 -height 15 
 	
  

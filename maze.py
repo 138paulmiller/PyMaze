@@ -274,21 +274,6 @@ def parse_arg(option, argv, i, arg_type) :
                             str(option)+'\nTry \'./maze -help\' for information\n')
 		sys.exit(-1) 	
 
-
-def save_maze(maze, out_filename):        
-
-	#write the maze to a text file
-	out_file = open(out_filename+'_maze.txt', 'w')	
-	out_file.write(maze.print_maze())
-	out_file.close()
-
-	# write the portals to a textfile
-	out_file= open(out_filename +'_portals.txt', 'w')
-	out_file.write( maze.print_portals())
-	out_file.close()
-
-
-	
 def getchar():
 	# Determine which getchar method to use
 	if os.name!='nt':
@@ -313,35 +298,61 @@ def getchar():
 		char = msvcrt.getch
 	return char
 
+def save_maze(maze, out_filename):        
+	#write the maze to a text file
+	out_file = open(out_filename+'_maze.txt', 'w')	
+	out_file.write(maze.print_maze())
+	out_file.close()
+
+	# write the portals to a textfile
+	out_file= open(out_filename +'_portals.txt', 'w')
+	out_file.write( maze.print_portals())
+	out_file.close()
+
+
+	
 	
 def play_maze(maze):
 	move = 0
 	quit_key = ord('q')
-	up_key = ord('A')
-	down_key = ord('B')
-	right_key = ord('C')
-	left_key = ord('D')
+	up_key = lambda key: key == ord('w') or key == ord('A')
+	down_key = lambda key: key == ord('s') or key == ord('B')
+	right_key = lambda key: key == ord('d') or key == ord('C')
+	left_key = lambda key: key == ord('a') or  key == ord('D')
+
 	#clear the screen clear if linux, cls if windows
-	os.system('clear' if os.name!='nt' else 'cls')
+	os.system('clear' if os.name!='nt' else 'cls')	
+	print(r'''
+		PyMaze 
+	Make it to the X!
+
+Controls:
+	Use the Arrow Keys or W A S D  to navigate
+	q To give up
+
+Press any key to start!
+	''')
+	getchar()
+	os.system('clear' if os.name!='nt' else 'cls')	
 	print(maze)
 
 	# exit when either ESC or q are entered
 	while move != quit_key and not maze.is_done():
 	# get the integer value of character input 
 		move = ord(getchar())
-		# update maze
-		if move == up_key:
+		# update maze based on input
+		if up_key(move):
 			maze.move(Maze.UP)
-		elif move == down_key:
+		elif down_key(move):
 			maze.move(Maze.DOWN)
-		elif move == right_key:
+		elif right_key(move):
 			maze.move(Maze.RIGHT)
-		elif move == left_key:
+		elif left_key(move):
 			maze.move(Maze.LEFT)	
-		#clear the screen clear if linux, cls if windows
+
 		os.system('clear' if os.name!='nt' else 'cls')
 		print(maze)
-	
+
 	# say goodbye
 	print('Thanks for Playing!');
 		
@@ -404,13 +415,13 @@ Example:
 				 '\nTry \'./maze -help\' for information\n')	
 			sys.exit(-1) 		
 
-		#create the maze
-		maze = Maze(width, height, seed)
-		# activate a repl-like command interpreter to try to solve the maze 
-		if interactive:
-		    play_maze(maze)
-		else:
-			save_maze(maze, out_filename)
+	#create the maze
+	maze = Maze(width, height, seed)
+	# activate a repl-like command interpreter to try to solve the maze 
+	if interactive:
+	    play_maze(maze)
+	else:
+		save_maze(maze, out_filename)
 			
 if __name__ == '__main__':
 	main() 
