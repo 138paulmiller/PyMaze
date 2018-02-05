@@ -60,7 +60,6 @@ class Maze:
 		self.height = height
 		self.seed = seed
 		self.init_symbols(symbols)
-		self.path_map  = {} # quick lookup for paths and player
 		self.path = [] # current path taken
 		self.player = (0,0) # players position
 		# self.items = [(x,y)] #TODO?? Add a list of possible items to collect for points?
@@ -95,7 +94,8 @@ class Maze:
 
 	def to_str(self):
 		'''
-		Defines the string representaion of the maze
+		Defines the string representaion of the maze.
+		If ansi is True, this string will contain the path symbols, otherwise it will not
 		@return
 			Maze	: constructed object
 		'''	
@@ -111,65 +111,77 @@ class Maze:
 				s+=self.wall_v + self.start
 			else:
 				s+=self.wall_v
-				# else draw o for vertical moves in path
-				if (0, row) in self.path:
-					s+=self.tail
-				# or # to denote player pos
-				elif (0, row) == self.player:
-					s+=self.head
-				# or empty
+				if not self.ansi:
+					# else draw o for vertical moves in path
+					if (0, row) in self.path:
+						s+=self.tail
+					# or # to denote player pos
+					elif (0, row) == self.player:
+						s+=self.head
+					# or empty
+					else:
+						s+=self.empty
 				else:
 					s+=self.empty	
+	
 			# draw | if no portal between [row][col] and [row][col-1]	
 			for col in range(1, self.width): 	
 				# if edge to the left
-				key = self.grid[col][row]
-				left_key = self.grid[col-1][row]
+				key = (col, row)
+				left_key = (col-1, row)
 				#initially draw wall				
 				c = self.wall_v
 				#check for portal between [a][b] or [b][a]	
 				if left_key in self.portals[key] or \
 					key in self.portals[left_key]:
-						# if portal remove wall
-						# if portal is inbetween paths, color  as tail
-						if ((col, row) in self.path_map and (col-1, row) in self.path_map) or\
-							((col-1, row) in self.path_map and (col, row) == self.player) or\
-							((col, row) in self.path_map and (col-1, row) == self.player)   :
-							c = self.tail
-						else:
-							c = self.empty
+					c = self.empty
+					# if portal remove wall
+					# ansi if portal is inbetween paths, color  as tail
+					if not self.ansi and \
+						((col, row) in self.path and (col-1, row) in self.path) or\
+						((col-1, row) in self.path and (col, row) == self.player) or\
+						((col, row) in self.path and (col-1, row) == self.player)   :
+						c = self.tail
+					else:
+						c = self.empty
 				# if at [width-1][height-1] draw end marker
 				if row == self.height-1 and col == self.width-1:
 					c += self.end	
 				else: # draw path or player marker if if
-					# any in path draw o for horizontal moves in path
-					if (col, row) in self.path:	
-						c+=self.tail
-					# or # to denote player pos
-					elif (col,row) == self.player:
-						c+=self.head
+					if not self.ansi:
+						# any in path draw o for horizontal moves in path
+						if (col, row) in self.path:	
+							c+=self.tail
+						# or # to denote player pos
+						elif (col,row) == self.player:
+							c+=self.head
+						else:
+							c += self.empty
 					else:
 						c += self.empty
+					
 				s += c 	
 			s+=self.wall_v +'\n'
-
 			# draw - if not portal between [row][col] and [row-1][col]
 			for col in range(0, self.width):
 				# if edge below (relative to view, so really above)
 				c =self.wall_h
-
-				key = self.grid[col][row]	
+				key = (col, row)	
 				if row+1 < self.height:
-					down_key = self.grid[col][row+1]		
+					down_key = (col, row+1)		
 					if down_key in self.portals[key] or\
 						key in self.portals[down_key]:
+						#if not ansi
 						# if portal is inbetween paths, color  as tail
-						if ((col, row) in self.path_map and (col, row+1) in self.path_map) or\
-							((col, row+1) in self.path_map and (col, row) == self.player) or\
-							((col, row) in self.path_map and (col, row+1) == self.player)   :
+						if not self.ansi and\
+							((col, row) in self.path and (col, row+1) in self.path) or\
+							((col, row+1) in self.path and (col, row) == self.player) or\
+							((col, row) in self.path and (col, row+1) == self.player)   :
 							c = self.tail
 						else:
-							c = self.empty			
+							c = self.empty
+		
+			
 				s+=self.wall_c + c
 			s+=self.wall_c +'\n'
 		s+=self.empty
@@ -194,6 +206,7 @@ class Maze:
 	def init_symbols(self, symbols):
 		# if custom symbols
 		if symbols:
+
 			#get symbol colors _color + bg_color
 			start_color = symbols['start_color'] if 'start_color' in symbols else ''
 			start_bg_color = symbols['start_bg_color'] if 'start_bg_color' in symbols else ''
@@ -212,6 +225,7 @@ class Maze:
 
 		
 			# symbol colors
+			self.ansi = True
 			self.start = start_bg_color	+ start_color 	+ symbols['start']
 			self.end =  end_bg_color 	+ end_color 	+ symbols['end']    
 			self.wall_h = wall_bg_color	+ wall_color 	+ symbols['wall_h'] 
@@ -221,6 +235,8 @@ class Maze:
 			self.tail = tail_bg_color 	+ tail_color 	+ symbols['tail']   
 			self.empty = self.COLOR_DEFAULT+' '
 		else:
+			#not ansi
+			self.ansi = False
 			# default symbols
 			self.start = 'S'
 			self.end = 'X'
@@ -274,7 +290,7 @@ class Maze:
 		for row in range(0, self.height):
 			for col  in range(0,self.width):
 				# the key is the cells unique id
-				key = self.grid[col][row]
+				key = (col,row)
 				# create the singleton 
 				disjoint_set.make_set(key)
 				# intialize the keys portal dict
@@ -288,8 +304,8 @@ class Maze:
 			# get next edge ((row1, col1), (row2,col2))
 			edge = edges.pop()
 			# get the sets for each vertex in the edge
-			key_a = self.grid[edge[0][0]][edge[0][1]]
-			key_b = self.grid[edge[1][0]][edge[1][1]]
+			key_a = (edge[0][0], edge[0][1])
+			key_b = (edge[1][0], edge[1][1])
 			set_a = disjoint_set.find(key_a)
 			set_b = disjoint_set.find(key_b)
 			# if they are not in the same set they are not in the 
@@ -313,6 +329,7 @@ class Maze:
 		'''
 		assert(direction in [self.LEFT, self.RIGHT, self.UP, self.DOWN])
 		# if new move is the same as last move pop from path onto player 
+		prev_player = self.player
 		new_move = (self.player[0]+direction[0],\
 					self.player[1]+direction[1]) 
 		# if new move is not within grid
@@ -320,19 +337,47 @@ class Maze:
 			new_move[1] < 0 or new_move[1] >= self.height:
 			return 
 		#if theres a portal between player and newmove
-		player_key = self.width*self.player[1] + self.player[0]		
-		move_key = self.width*new_move[1] + new_move[0]	
-		
-		if move_key in self.portals[player_key] or\
-			player_key in self.portals[move_key]: 
+		# player_key = self.player[1] + self.player[0]		
+		# move_key = new_move[1] + new_move[0]	
+		# if ansi move cursor, prevents refresh flicker from large ANSI escaped string generated from to_str
+		#'\033[%d;%dH' % (x, y)# move cursor to y, x
+ 		
+		if new_move in self.portals[self.player] or\
+			self.player in self.portals[new_move]: 
+			portal = (self.player, new_move)\
+					 if new_move in self.portals[self.player] else (new_move, self.player)
 			if len(self.path) > 0 and new_move == self.path[-1]:
 				self.player = self.path.pop()
-				self.path_map.pop(self.player, None)
+				# color head to empty and path top to head
+				if self.ansi:
+					
+					# move cursor to player and color tail, move cursor to player and color empty
+					head = '\033[%d;%dH' % (new_move[1]*2+2, new_move[0]*2+2) + self.head
+					# uncolor edge between
+					edge = '\033[%d;%dH' % ((portal[1][1]+portal[0][1])/2*2+2, (portal[1][0]+portal[0][0])/2*2+2) + self.empty
+
+					tail = '\033[%d;%dH' % (prev_player[1]*2+2, prev_player[0]*2+2) + self.empty
+
+					end = '\033[%d;%dH' % (self.height*2+2, 0) + self.empty
+
+					sys.stdout.write(head+edge+tail+end)
+					sys.stdout.flush()
 			else:
 				self.path.append(self.player)
-				self.path_map[self.player] = True
 				self.player = new_move
-	
+				#move cursor to position to draw if ANSI
+				if self.ansi:
+					# ANSI escaped command moves cursor to  row y, column x
+					head = '\033[%d;%dH' % (new_move[1]*2+2,  new_move[0]*2+2)+ self.head
+					tail = '\033[%d;%dH' % (prev_player[1]*2+2, prev_player[0]*2+2) + self.tail
+					# color edge between
+					edge = '\033[%d;%dH' % ((portal[1][1]+portal[0][1])/2*2+2, (portal[1][0]+portal[0][0])/2*2+2) + self.tail
+
+					end = '\033[%d;%dH' % (self.height*2+2, 0) + self.empty
+					
+					sys.stdout.write(head+edge+tail+end)
+					sys.stdout.flush()
+					
 	
 	def is_done(self):
 		'''
@@ -383,7 +428,6 @@ def save_maze(maze, out_filename):
 
 	
 def play_maze(maze):
-	move = 0
 	quit_key = ord('q')
 	up_key = lambda key: key == ord('w') or key == ord('A')
 	down_key = lambda key: key == ord('s') or key == ord('B')
@@ -405,7 +449,7 @@ Press any key to start!
 	getchar()
 	os.system('clear' if os.name!='nt' else 'cls')	
 	print(maze)
-
+	move = 0
 	# exit when either ESC or q are entered
 	while move != quit_key and not maze.is_done():
 	# get the integer value of character input 
@@ -419,8 +463,9 @@ Press any key to start!
 			maze.move(Maze.RIGHT)
 		elif left_key(move):
 			maze.move(Maze.LEFT)	
-		os.system('clear' if os.name!='nt' else 'cls')
-		print(maze)
+		if not maze.ansi: #only refresh entire maze if not ansi
+			os.system('clear' if os.name!='nt' else 'cls')
+			print(maze)
 
 	# say goodbye
 	print('Thanks for Playing!');
