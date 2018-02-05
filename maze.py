@@ -60,6 +60,7 @@ class Maze:
 		self.height = height
 		self.seed = seed
 		self.init_symbols(symbols)
+		self.path_map  = {} # quick lookup for paths and player
 		self.path = [] # current path taken
 		self.player = (0,0) # players position
 		# self.items = [(x,y)] #TODO?? Add a list of possible items to collect for points?
@@ -90,9 +91,9 @@ class Maze:
 		@return
 			String : Ascii representation of the Maze
 		'''
-		return self.print_maze()
+		return self.to_str()
 
-	def print_maze(self):
+	def to_str(self):
 		'''
 		Defines the string representaion of the maze
 		@return
@@ -131,9 +132,9 @@ class Maze:
 					key in self.portals[left_key]:
 						# if portal remove wall
 						# if portal is inbetween paths, color  as tail
-						if ((col, row) in self.path and (col-1, row) in self.path) or\
-							((col-1, row) in self.path and (col, row) == self.player) or\
-							((col, row) in self.path and (col-1, row) == self.player)   :
+						if ((col, row) in self.path_map and (col-1, row) in self.path_map) or\
+							((col-1, row) in self.path_map and (col, row) == self.player) or\
+							((col, row) in self.path_map and (col-1, row) == self.player)   :
 							c = self.tail
 						else:
 							c = self.empty
@@ -163,9 +164,9 @@ class Maze:
 					if down_key in self.portals[key] or\
 						key in self.portals[down_key]:
 						# if portal is inbetween paths, color  as tail
-						if ((col, row) in self.path and (col, row+1) in self.path) or\
-							((col, row+1) in self.path and (col, row) == self.player) or\
-							((col, row) in self.path and (col, row+1) == self.player)   :
+						if ((col, row) in self.path_map and (col, row+1) in self.path_map) or\
+							((col, row+1) in self.path_map and (col, row) == self.player) or\
+							((col, row) in self.path_map and (col, row+1) == self.player)   :
 							c = self.tail
 						else:
 							c = self.empty			
@@ -174,7 +175,7 @@ class Maze:
 		s+=self.empty
 		return s
 
-	def print_portals(self):
+	def portals_str(self):
 		'''
 		Returns a string containing a list of all portal coordinates
 		'''
@@ -326,8 +327,10 @@ class Maze:
 			player_key in self.portals[move_key]: 
 			if len(self.path) > 0 and new_move == self.path[-1]:
 				self.player = self.path.pop()
+				self.path_map.pop(self.player, None)
 			else:
 				self.path.append(self.player)
+				self.path_map[self.player] = True
 				self.player = new_move
 	
 	
@@ -369,12 +372,12 @@ def getchar():
 def save_maze(maze, out_filename):        
 	#write the maze to a text file
 	out_file = open(out_filename+'_maze.txt', 'w')	
-	out_file.write(maze.print_maze())
+	out_file.write(maze.to_str())
 	out_file.close()
 
 	# write the portals to a textfile
 	out_file= open(out_filename +'_portals.txt', 'w')
-	out_file.write( maze.print_portals())
+	out_file.write( maze.portals_str())
 	out_file.close()
 
 
