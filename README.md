@@ -1,35 +1,14 @@
 # PyMaze
-Python3 script that employs a randomized [Kruskal's Algorithm](https://en.wikipedia.org/wiki/Kruskal%27s_algorithm) to generate Mazes.
 
-## Usage
-To create a randomly generated maze execute
+## About
+This program provides a quick and easy solution to your maze-deficiency issues. There are generally two use cases for this program, to generate a file containing a maze to solve or to start an interactive maze game within your favorite terminal. 
 
-	python3 maze.py
+### Interactive
+[](./demo.gif)
 
-Or if on linux, the script can invoked be the default python3 interpreter
+## Maze Generation
+As of now, the algorithm employs a randomized [Kruskal's Algorithm](https://en.wikipedia.org/wiki/Kruskal%27s_algorithm) to generate Mazes. 
 
-	./maze.py
-
-By default, maze.py will generate a random 15 by 15 maze in the mazes directory. 
-
-	./maze.py -[OPTION=ARG]*
-
-	-width COL	Sets the maze width (number of columns) to COL, default is 15
-	-height ROW	Sets the maze height (number of rows) to ROW, default is 15
-	-seed SEED	Sets Random Number Generator's seed to SEED, default seed is random
-	-out NAME	Sets output file prefix to NAME, default is seed number		
-	-interactive	Starts CLI to try to solve the maze. Does not save to file	
-	-help		Prints help menu
-
-#### Examples
-The following generates two files, MyMaze_maze.txt and MyMaze_portals.txt, which contain a 50x45 maze with a random seed of 13.1 
-
-		./maze.pys -width 50 -height 45 -seed 13.1 -out MyMaze
-
-This will start the interactive 15 by 15 maze in the terminal.	
-
-		./maze.py -interactive -width 15 -height 15 
-	
  
 
 ## Maze Files
@@ -44,7 +23,7 @@ For example, if the seed used was 138.1 then the maze files will be 138.1_maze.t
 
 ## Portals
 These files are used for debugging purposes and represent the undirected edges of the maze's graph structure. 
-The <seed>_portals.txt is a list of 2D coordinates. Each coordinate is a pair of cell identifiers and if a pair exists, the player may move between the two cells.
+The _portals.txt is a list of 2D coordinates. Each coordinate is a pair of cell identifiers and if a pair exists, the player may move between the two cells.
 
 Example on a 3x3 Maze
 	
@@ -66,4 +45,32 @@ Cells are located at column by row coordinates. A cells coordinates are at (x, y
 ## Seed Numbers
 The number that is prepended to these files is the randomly generated number that seeds python's random number generator. The seed value determines the sequence of values generated, and using the same seed ontwo mazes of equal dimensions will generate the same maze. By default the seed is random if not explicitly set. So running the script without the seed option will generate a new maze each execution.
 
+## Usage
+To create a randomly generated maze execute
+
+	python3 maze.py
+
+Or if on linux, the script can invoked be the default python3 interpreter
+
+	./maze.py
+
+By default, maze.py will generate a random 15 by 15 maze. The maze files will be created in the mazes directory. 
+
+	./maze.py -[OPTION|ARG]*
+
+	-width COL	Sets the maze width (number of columns) to COL, default is 15
+	-height ROW	Sets the maze height (number of rows) to ROW, default is 15
+	-seed SEED	Sets Random Number Generator's seed to SEED, default seed is random
+	-out NAME	Sets output file prefix to NAME, default is seed number		
+	-interactive	Starts CLI maze game. Does not save to file	
+	-help		Prints help menu
+
+#### Examples
+The following generates two files, MyMaze_maze.txt and MyMaze_portals.txt, which contain a 50x45 maze with a random seed of 13.1 
+
+		./maze.py -width 50 -height 45 -seed 13.1 -out MyMaze
+
+This will start an interactive 15 by 15 maze game in the terminal.	
+
+		./maze.py -interactive -width 15 -height 15 
 

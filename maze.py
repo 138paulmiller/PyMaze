@@ -19,13 +19,22 @@ class Maze:
 	LEFT = (-1, 0)
 	RIGHT = (1,0)
 
-	def __init__(self, width, height, seed=1):
+	def __init__(self, width, height, seed, symbols):
 		'''
 		Default constructor to create an widthXheight maze
 		@params 
 			width(int)	: number of columns
 			height(int)	: number of rows
 			seed(float)	: number to seed RNG
+			symbols(dict)	: used to modify maze symbols and colors
+							settings[
+								start, end,
+								wall_v, wall_h, wall_c, wall_color,
+								head,tail, head_color, tail_color ]
+							start,end : start and end symbols
+							wall_v, wall_h, wall_c: vertical,horizontal and corner wall symbols 
+							head,tail, : player head and trail symbols
+							_color: color of symbol
 		@return
 			Maze	: constructed object
 		'''
@@ -33,6 +42,7 @@ class Maze:
 		self.width = width
 		self.height = height
 		self.seed = seed
+		self.symbols = symbols
 		self.path = [] # current path taken
 		self.player = (0,0) # players position
 		# self.items = [(x,y)] #TODO?? Add a list of possible items to collect for points?
@@ -71,32 +81,42 @@ class Maze:
 		@return
 			Maze	: constructed object
 		'''
+		#get symbols
+		start = self.symbols['start']
+		end = self.symbols['end']
+		wall_h = self.symbols['wall_h']
+		wall_v = self.symbols['wall_v']
+		wall_c = self.symbols['wall_c']
+		head = self.symbols['head']
+		tail = self.symbols['tail']
 		s=''
 		for col in range(0, self.width):
-			s += '+-'
-		s+='+\n'
+			s+=self.symbols['wall_c']+self.symbols['wall_h']
+		
+		s+=wall_c+'\n'
 		# wall if region not the same	
 		for row in range(0,self.height):	
 			# draw S for start if at (0,0)
 			if row == 0:
-				s+= '|S'
+				s+=self.symbols['wall_v'] + self.symbols['start']
 			else:
+				s+=wall_v
 				# else draw o for vertical moves in path
 				if (0, row) in self.path:
-					s +='|o'
+					s+=tail
 				# or # to denote player pos
 				elif (0, row) == self.player:
-					s += '|#'
+					s+=head
 				# or empty
 				else:
-					s+= '| '	
+					s+=' '	
 			# draw | if no portal between [row][col] and [row][col-1]	
 			for col in range(1, self.width): 	
 				# if edge to the left
 				key = self.grid[col][row]
 				left_key = self.grid[col-1][row]
 				#initially draw wall				
-				c = '|'
+				c = wall_v
 				#check for portal between [a][b] or [b][a]	
 				if left_key in self.portals[key] or \
 					key in self.portals[left_key]:
@@ -104,31 +124,33 @@ class Maze:
 						c = ' '
 				# if at [width-1][height-1] draw end marker
 				if row == self.height-1 and col == self.width-1:
-					c += 'X'	
+					c += end	
 				else: # draw path or player marker if if
 					# any in path draw o for horizontal moves in path
 					if (col, row) in self.path:	
-						c +='o'
+						c+=tail
 					# or # to denote player pos
 					elif (col,row) == self.player:
-						c += '#' 
+						c+=head
 					else:
 						c += ' '
 				s += c 	
-			s += '|\n'
+			s+=wall_v +'\n'
+
 			# draw - if not portal between [row][col] and [row-1][col]
 			for col in range(0, self.width):
 				# if edge below (relative to view, so really above)
-				c = '-'	
+				c =wall_h
+
 				key = self.grid[col][row]	
 				if row+1 < self.height:
 					down_key = self.grid[col][row+1]		
 					if down_key in self.portals[key] or\
 						key in self.portals[down_key]:
 						c = ' '			
-				s += '+' + c
-			s+= '+\n'	
-		
+				s+=wall_c + c
+			s+=wall_c +'\n'
+
 		return s
 
 	def print_portals(self):
@@ -368,7 +390,7 @@ Options:
 	-height ROW	Sets the maze height (number of rows) to ROW, default is 15
 	-seed SEED	Sets Random Number Generator's seed to SEED, default seed is random
 	-out NAME	Sets output file prefix to NAME, default is seed number		
-	-interactive	Starts CLI to try to solve the maze. Does not save to file	
+	-interactive	Starts CLI to a maze game. Does not save to file	
 	-help	Prints this menu
 Example:
 	The following generates two files, MyMaze_maze.txt and MyMaze_portals.txt, which contain a 50x45 maze with a random seed of 13.1 
@@ -384,7 +406,24 @@ Example:
 	width = 15
 	height = 15 
 	interactive = False
-
+	# symbols = {
+	# 	'start' : 'S',
+	# 	'end' : 'X',
+	# 	'wall_v' : '|',
+	# 	'wall_h' : '-',
+	# 	'wall_c' : '+',
+	# 	'head' : '#',
+	# 	'tail' : 'o'
+	# }
+	symbols = {
+		'start' : u'o',
+		'end' : u'x',
+		'wall_v' : u'█',
+		'wall_h' : u'█',
+		'wall_c' : u'█',
+		'head' : '#',
+		'tail' : 'o'
+	}
 	out_filename = 'mazes/%08.3f'% seed # default file names is in mazes dir and seed used
 	#parse arguments not including script path
 	i = 1	
@@ -416,7 +455,7 @@ Example:
 			sys.exit(-1) 		
 
 	#create the maze
-	maze = Maze(width, height, seed)
+	maze = Maze(width, height, seed, symbols)
 	# activate a repl-like command interpreter to try to solve the maze 
 	if interactive:
 	    play_maze(maze)
