@@ -85,28 +85,3 @@ class DisjointSet:
 				root_b.parent = root_a
 				root_a.rank+=1
 
-'''
-# Unoptimized approached (does not perform union by rank)
-	def __init__(self):
-		# intialize an empty set list
-		self.sets = []
-	
-	def make_set(self, key):
-		# adds a new set singleton to the set list
-		self.sets.append([key])
-	
-	def find(self, key): 
-		# find the set the key exists in
-		for set in self.sets:
-			if key in set:
-				return set
-		return None
-	
-	def union(self, set_a, set_b):
-		# merges set_b into set_a and removes set_b from the set list
-		if set_a and set_b and set_a != set_b:
-			# extend set_a(reference to set in sets)
-			set_a.extend(set_b)	
-			self.sets.remove(set_b)
-
-'''

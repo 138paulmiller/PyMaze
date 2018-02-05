@@ -18,6 +18,26 @@ class Maze:
 	DOWN = (0, 1)
 	LEFT = (-1, 0)
 	RIGHT = (1,0)
+	# defalt ANSI settings from user
+	COLOR_DEFAULT = u'\u001b[0m'
+	# foreground colors (text)
+	COLOR_BLACK = u'\u001b[30m'
+	COLOR_RED =  u'\u001b[31m'
+	COLOR_GREEN = u'\u001b[32m'
+	COLOR_YELLOW = u'\u001b[33m'
+	COLOR_BLUE  =u'\u001b[34m'
+	COLOR_MAGENTA = u'\u001b[35m'
+	COLOR_CYAN = u'\u001b[36m'
+	COLOR_WHITE = u'\u001b[37m'
+	# background colors 
+	COLOR_BG_BLACK = u'\u001b[40m'
+	COLOR_BG_RED =  u'\u001b[41m'
+	COLOR_BG_GREEN =  u'\u001b[42m'
+	COLOR_BG_YELLOW = u'\u001b[43m'
+	COLOR_BG_BLUE = u'\u001b[44m'
+	COLOR_BG_MAGENTA =  u'\u001b[45m'
+	COLOR_BG_CYAN = u'\u001b[46m'
+	COLOR_BG_WHITE= u'\u001b[47m'
 
 	def __init__(self, width, height, seed, symbols):
 		'''
@@ -27,22 +47,19 @@ class Maze:
 			height(int)	: number of rows
 			seed(float)	: number to seed RNG
 			symbols(dict)	: used to modify maze symbols and colors
-							settings[
-								start, end,
-								wall_v, wall_h, wall_c, wall_color,
-								head,tail, head_color, tail_color ]
-							start,end : start and end symbols
-							wall_v, wall_h, wall_c: vertical,horizontal and corner wall symbols 
-							head,tail, : player head and trail symbols
-							_color: color of symbol
-		@return
+							settings{
+								start, end, start_color, end_color, : start and end symbols and colors
+								wall_v, wall_h, wall_c, wall_color, : vertical,horizontal and corner wall symbols and colors 
+								head, tail, head_color, tail_color   : player head and trail symbols and colors
+								*_bg_color, : substitute _color with bg_color to set background colors 
+		@return												
 			Maze	: constructed object
 		'''
 		assert width > 0; assert height > 0
 		self.width = width
 		self.height = height
 		self.seed = seed
-		self.symbols = symbols
+		self.init_symbols(symbols)
 		self.path = [] # current path taken
 		self.player = (0,0) # players position
 		# self.items = [(x,y)] #TODO?? Add a list of possible items to collect for points?
@@ -80,77 +97,81 @@ class Maze:
 		Defines the string representaion of the maze
 		@return
 			Maze	: constructed object
-		'''
-		#get symbols
-		start = self.symbols['start']
-		end = self.symbols['end']
-		wall_h = self.symbols['wall_h']
-		wall_v = self.symbols['wall_v']
-		wall_c = self.symbols['wall_c']
-		head = self.symbols['head']
-		tail = self.symbols['tail']
+		'''	
 		s=''
 		for col in range(0, self.width):
-			s+=self.symbols['wall_c']+self.symbols['wall_h']
+			s+=self.wall_c + self.wall_h
 		
-		s+=wall_c+'\n'
+		s+=self.wall_c+'\n'
 		# wall if region not the same	
 		for row in range(0,self.height):	
 			# draw S for start if at (0,0)
 			if row == 0:
-				s+=self.symbols['wall_v'] + self.symbols['start']
+				s+=self.wall_v + self.start
 			else:
-				s+=wall_v
+				s+=self.wall_v
 				# else draw o for vertical moves in path
 				if (0, row) in self.path:
-					s+=tail
+					s+=self.tail
 				# or # to denote player pos
 				elif (0, row) == self.player:
-					s+=head
+					s+=self.head
 				# or empty
 				else:
-					s+=' '	
+					s+=self.empty	
 			# draw | if no portal between [row][col] and [row][col-1]	
 			for col in range(1, self.width): 	
 				# if edge to the left
 				key = self.grid[col][row]
 				left_key = self.grid[col-1][row]
 				#initially draw wall				
-				c = wall_v
+				c = self.wall_v
 				#check for portal between [a][b] or [b][a]	
 				if left_key in self.portals[key] or \
 					key in self.portals[left_key]:
-						# if portal remove wall  
-						c = ' '
+						# if portal remove wall
+						# if portal is inbetween paths, color  as tail
+						if ((col, row) in self.path and (col-1, row) in self.path) or\
+							((col-1, row) in self.path and (col, row) == self.player) or\
+							((col, row) in self.path and (col-1, row) == self.player)   :
+							c = self.tail
+						else:
+							c = self.empty
 				# if at [width-1][height-1] draw end marker
 				if row == self.height-1 and col == self.width-1:
-					c += end	
+					c += self.end	
 				else: # draw path or player marker if if
 					# any in path draw o for horizontal moves in path
 					if (col, row) in self.path:	
-						c+=tail
+						c+=self.tail
 					# or # to denote player pos
 					elif (col,row) == self.player:
-						c+=head
+						c+=self.head
 					else:
-						c += ' '
+						c += self.empty
 				s += c 	
-			s+=wall_v +'\n'
+			s+=self.wall_v +'\n'
 
 			# draw - if not portal between [row][col] and [row-1][col]
 			for col in range(0, self.width):
 				# if edge below (relative to view, so really above)
-				c =wall_h
+				c =self.wall_h
 
 				key = self.grid[col][row]	
 				if row+1 < self.height:
 					down_key = self.grid[col][row+1]		
 					if down_key in self.portals[key] or\
 						key in self.portals[down_key]:
-						c = ' '			
-				s+=wall_c + c
-			s+=wall_c +'\n'
-
+						# if portal is inbetween paths, color  as tail
+						if ((col, row) in self.path and (col, row+1) in self.path) or\
+							((col, row+1) in self.path and (col, row) == self.player) or\
+							((col, row) in self.path and (col, row+1) == self.player)   :
+							c = self.tail
+						else:
+							c = self.empty			
+				s+=self.wall_c + c
+			s+=self.wall_c +'\n'
+		s+=self.empty
 		return s
 
 	def print_portals(self):
@@ -168,6 +189,46 @@ class Maze:
 					s+='\n'
 				i+=1
 		return s
+
+	def init_symbols(self, symbols):
+		# if custom symbols
+		if symbols:
+			#get symbol colors _color + bg_color
+			start_color = symbols['start_color'] if 'start_color' in symbols else ''
+			start_bg_color = symbols['start_bg_color'] if 'start_bg_color' in symbols else ''
+
+			end_color = symbols['end_color'] if 'end_color' in symbols else ''
+			end_bg_color = symbols['end_bg_color'] if 'end_bg_color' in symbols else ''
+
+			wall_color = symbols['wall_color'] if 'wall_color' in symbols else ''
+			wall_bg_color=symbols['wall_bg_color'] if 'wall_bg_color' in symbols else''
+			
+			head_color = symbols['head_color'] if 'head_color' in symbols else ''
+			head_bg_color=symbols['head_bg_color'] if 'head_bg_color' in symbols else ''
+
+			tail_color = symbols['tail_color'] if 'tail_color' in symbols else self.COLOR_DEFAULT
+			tail_bg_color = symbols['tail_bg_color'] if 'tail_bg_color' in symbols else self.COLOR_DEFAULT
+
+		
+			# symbol colors
+			self.start = start_bg_color	+ start_color 	+ symbols['start']
+			self.end =  end_bg_color 	+ end_color 	+ symbols['end']    
+			self.wall_h = wall_bg_color	+ wall_color 	+ symbols['wall_h'] 
+			self.wall_v = wall_bg_color	+ wall_color 	+ symbols['wall_v'] 
+			self.wall_c = wall_bg_color	+ wall_color 	+ symbols['wall_c'] 
+			self.head = head_bg_color 	+ head_color 	+ symbols['head']   
+			self.tail = tail_bg_color 	+ tail_color 	+ symbols['tail']   
+			self.empty = self.COLOR_DEFAULT+' '
+		else:
+			# default symbols
+			self.start = 'S'
+			self.end = 'X'
+			self.wall_v  = '|'
+			self.wall_h = '-'
+			self.wall_c = '+'
+			self.head =  '#'
+			self.tail = 'o'	
+			self.empty = ' '	
 
 	def kruskalize(self):
 		'''
@@ -263,8 +324,6 @@ class Maze:
 		
 		if move_key in self.portals[player_key] or\
 			player_key in self.portals[move_key]: 
-			if len(self.path) > 0:
-				print(self.path[-1])
 			if len(self.path) > 0 and new_move == self.path[-1]:
 				self.player = self.path.pop()
 			else:
@@ -282,20 +341,7 @@ class Maze:
 		'''
 		return self.player == (self.width-1, self.height-1)
 
-# move throwaway function to parse argument
-def parse_arg(option, argv, i, arg_type) :
-    #expect integer
-	try:
-		return arg_type(argv[i])
-	except ValueError:
-		print('\nError: Invalid argument type for option: '+\
-                            str(option)+'\nTry \'./maze -help\' for information\n')
-		sys.exit(-1) 	
-	except IndexError:
-		print('\nError: Missing argument for option: '+\
-                            str(option)+'\nTry \'./maze -help\' for information\n')
-		sys.exit(-1) 	
-
+	
 def getchar():
 	# Determine which getchar method to use
 	if os.name!='nt':
@@ -332,7 +378,6 @@ def save_maze(maze, out_filename):
 	out_file.close()
 
 
-	
 	
 def play_maze(maze):
 	move = 0
@@ -371,14 +416,27 @@ Press any key to start!
 			maze.move(Maze.RIGHT)
 		elif left_key(move):
 			maze.move(Maze.LEFT)	
-
 		os.system('clear' if os.name!='nt' else 'cls')
 		print(maze)
 
 	# say goodbye
 	print('Thanks for Playing!');
 		
-	
+
+def error(msg):
+	print(msg+'\nTry \'./maze -help\' for information\n')
+	sys.exit(-1) 
+
+# move throwaway function to parse argument
+def parse_arg(option, argv, i, arg_type) :
+    #expect integer
+	try:
+		return arg_type(argv[i])
+	except ValueError:
+		error('\nError: Invalid argument type for option: '+ str(option))
+	except IndexError:
+		error('\nError: Missing argument for option: '+str(option))
+
 
 def main():
 	usage = \
@@ -386,11 +444,12 @@ def main():
 PyMaze github.com/138paulmiller
 	./maze.py -[OPTION=ARG]*
 Options:
-	-width COL	Sets the maze width (number of columns) to COL, default is 15
-	-height ROW	Sets the maze height (number of rows) to ROW, default is 15
-	-seed SEED	Sets Random Number Generator's seed to SEED, default seed is random
+	-width COL	Sets the maze width (number of columns) to COL (Must be greater than 0). default is 15
+	-height ROW	Sets the maze height (number of rows) to ROW (Must be greater than 0). Default is 15
+	-seed SEED	Sets Random Number Generator's seed to SEED.  Default seed is random
 	-out NAME	Sets output file prefix to NAME, default is seed number		
-	-interactive	Starts CLI to a maze game. Does not save to file	
+	-interactive	Starts CLI maze game. Does not save to file	
+	-block	Print maze using Unicode block characters and ANSI style coloring, only works with interactive mode	
 	-help	Prints this menu
 Example:
 	The following generates two files, MyMaze_maze.txt and MyMaze_portals.txt, which contain a 50x45 maze with a random seed of 13.1 
@@ -406,25 +465,24 @@ Example:
 	width = 15
 	height = 15 
 	interactive = False
-	# symbols = {
-	# 	'start' : 'S',
-	# 	'end' : 'X',
-	# 	'wall_v' : '|',
-	# 	'wall_h' : '-',
-	# 	'wall_c' : '+',
-	# 	'head' : '#',
-	# 	'tail' : 'o'
-	# }
-	symbols = {
-		'start' : u'o',
-		'end' : u'x',
+
+	block_symbols = {
+		'start' : u'O',
+		'end' : u'X',
 		'wall_v' : u'█',
 		'wall_h' : u'█',
 		'wall_c' : u'█',
-		'head' : '#',
-		'tail' : 'o'
+		'head' : u'█',
+		'tail' : u'█',
+		'wall_color' : Maze.COLOR_BLUE,
+		'head_color' : Maze.COLOR_RED,
+		'tail_color' : Maze.COLOR_CYAN,
+		'start_bg_color' : Maze.COLOR_BG_YELLOW,
+		'end_bg_color' : Maze.COLOR_BG_YELLOW
 	}
-	out_filename = 'mazes/%08.3f'% seed # default file names is in mazes dir and seed used
+	symbols = None
+	out_filename_default = 'mazes/%08.3f'% seed
+	out_filename = out_filename_default # default file names is in mazes dir and seed used
 	#parse arguments not including script path
 	i = 1	
 	while i < argc:
@@ -432,9 +490,14 @@ Example:
 		i+=1 # next option
 		if option == '-width':
 			width = parse_arg( '-width', argv, i, int)
+			if width <= 0:
+				error('Invalid argument: width must be a positive integer')
+
 			i+=1 # eat next arg
 		elif option == '-height':
 			height = parse_arg('-height', argv, i, int)
+			if height <= 0:
+				error('Invalid argument: width must be a positive integer')
 			i+=1 # eat next arg
 		elif option == '-seed':
 			seed = parse_arg('-seed', argv, i, float)
@@ -446,21 +509,28 @@ Example:
 			i+=1 # eat next arg
 		elif option == '-interactive':
 			interactive = True
+		elif option == '-block':
+			symbols = block_symbols
 		elif option == '-help':
 			print(usage)
 			sys.exit(-1) 		
 		else:
-			print("Invalid option: " + option + \
-				 '\nTry \'./maze -help\' for information\n')	
-			sys.exit(-1) 		
-
+			error('Invalid option: ' + option )	
+			
 	#create the maze
 	maze = Maze(width, height, seed, symbols)
 	# activate a repl-like command interpreter to try to solve the maze 
 	if interactive:
-	    play_maze(maze)
+		if out_filename_default != out_filename:		
+			error('Error: Output file NOT compatible with interactive mode')	
+		else:
+			play_maze(maze)
 	else:
-		save_maze(maze, out_filename)
+		# if using block symbols and printing to file print error
+		if symbols:		
+			error('Error: Block mode only compatible with interactive mode')	
+		else:
+			save_maze(maze, out_filename)
 			
 if __name__ == '__main__':
 	main() 
