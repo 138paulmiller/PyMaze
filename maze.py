@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+
 '''
 Random Maze Generator
 Makes use of a radomized version of Kruskal's Minimum Spanning Tree (MST) 
@@ -6,7 +7,7 @@ algorithm to generate a random ASCII maze!
 @author: Paul Miller (github.com/138paulmiller)
 '''
 
-import os, sys, tty, random
+import os, sys, random, math
 # defined in disjointSet.py
 import disjointSet as ds
 
@@ -39,7 +40,7 @@ class Maze:
 	COLOR_BG_CYAN = u'\u001b[46m'
 	COLOR_BG_WHITE= u'\u001b[47m'
 
-	def __init__(self, width, height, seed, symbols):
+	def __init__(self, width, height, seed, symbols=None):
 		'''
 		Default constructor to create an widthXheight maze
 		@params 
@@ -142,6 +143,7 @@ class Maze:
 						((col-1, row) in self.path and (col, row) == self.player) or\
 						((col, row) in self.path and (col-1, row) == self.player)   :
 						c = self.tail
+
 					else:
 						c = self.empty
 				# if at [width-1][height-1] draw end marker
@@ -340,7 +342,7 @@ class Maze:
 		# player_key = self.player[1] + self.player[0]		
 		# move_key = new_move[1] + new_move[0]	
 		# if ansi move cursor, prevents refresh flicker from large ANSI escaped string generated from to_str
-		#'\033[%d;%dH' % (x, y)# move cursor to y, x
+		#'\033[%d;%dH' % (y x)# move cursor to y, x
  		
 		if new_move in self.portals[self.player] or\
 			self.player in self.portals[new_move]: 
@@ -349,19 +351,17 @@ class Maze:
 			if len(self.path) > 0 and new_move == self.path[-1]:
 				self.player = self.path.pop()
 				# color head to empty and path top to head
-				if self.ansi:
-					
+				if self.ansi:		
 					# move cursor to player and color tail, move cursor to player and color empty
 					head = '\033[%d;%dH' % (new_move[1]*2+2, new_move[0]*2+2) + self.head
 					# uncolor edge between
-					edge = '\033[%d;%dH' % ((portal[1][1]+portal[0][1])/2*2+2, (portal[1][0]+portal[0][0])/2*2+2) + self.empty
+					#edge = '\033[%d;%dH' % ((portal[1][1]+portal[0][1])/2*2+2, (portal[1][0]+portal[0][0])/2*2+2) + self.empty
+					edge = '\033[%d;%dH' %  (prev_player[1]*2+(new_move[1]-prev_player[1])+2,\
+											prev_player[0]*2+(new_move[0]-prev_player[0])+2) + self.empty
 
 					tail = '\033[%d;%dH' % (prev_player[1]*2+2, prev_player[0]*2+2) + self.empty
 
 					end = '\033[%d;%dH' % (self.height*2+2, 0) + self.empty
-
-					sys.stdout.write(head+edge+tail+end)
-					sys.stdout.flush()
 			else:
 				self.path.append(self.player)
 				self.player = new_move
@@ -371,12 +371,15 @@ class Maze:
 					head = '\033[%d;%dH' % (new_move[1]*2+2,  new_move[0]*2+2)+ self.head
 					tail = '\033[%d;%dH' % (prev_player[1]*2+2, prev_player[0]*2+2) + self.tail
 					# color edge between
-					edge = '\033[%d;%dH' % ((portal[1][1]+portal[0][1])/2*2+2, (portal[1][0]+portal[0][0])/2*2+2) + self.tail
+					#edge = '\033[%d;%dH' % ((portal[1][1]+portal[0][1])/2*2+2, (portal[1][0]+portal[0][0])/2*2+2) + self.tail
+					edge = '\033[%d;%dH' %  (prev_player[1]*2+(new_move[1]-prev_player[1])+2,\
+											prev_player[0]*2+(new_move[0]-prev_player[0])+2) + self.tail
 
 					end = '\033[%d;%dH' % (self.height*2+2, 0) + self.empty
 					
-					sys.stdout.write(head+edge+tail+end)
-					sys.stdout.flush()
+			if self.ansi:
+				sys.stdout.write(head+edge+tail+end)
+				sys.stdout.flush()
 					
 	
 	def is_done(self):
@@ -394,7 +397,7 @@ def getchar():
 	# Determine which getchar method to use
 	if os.name!='nt':
 		# import unix terminal interface
-		import termios
+		import termios, tty
 		# get stdin file descriptor 
 		file_desc = sys.stdin.fileno()
 		# get stdin file settings
@@ -411,7 +414,7 @@ def getchar():
 	# use windows getchar
 	else:
 		import msvcrt
-		char = msvcrt.getch
+		char = msvcrt.getch()
 	return char
 
 def save_maze(maze, out_filename):        
@@ -437,18 +440,21 @@ def play_maze(maze):
 	#clear the screen clear if linux, cls if windows
 	os.system('clear' if os.name!='nt' else 'cls')	
 	print(r'''
-		PyMaze 
-	Make it to the X!
-
+#######  ##    ## ##     ##    ###    ########  ######## 
+##    ##  ##  ##  ###   ###   ## ##        ##   ##       
+##    ##   ####   #### ####  ##   ##      ##    ######       
+#######     ##    ## ### ## #########    ##     ##
+##          ##    ##     ## ##     ##   ##      ##       
+##          ##    ##     ## ##     ##  ######## ########                                      
 Controls:
-	Use the Arrow Keys or W A S D  to navigate
-	q To give up
+	WASD	- To navigate (or Arrow Keys on Linux)
+	q	- To give up (or ESC on Linux)
 
 Press any key to start!
 	''')
 	getchar()
 	os.system('clear' if os.name!='nt' else 'cls')	
-	print(maze)
+	print(maze.to_str())
 	move = 0
 	# exit when either ESC or q are entered
 	while move != quit_key and not maze.is_done():
@@ -465,7 +471,7 @@ Press any key to start!
 			maze.move(Maze.LEFT)	
 		if not maze.ansi: #only refresh entire maze if not ansi
 			os.system('clear' if os.name!='nt' else 'cls')
-			print(maze)
+			print(maze.to_str())
 
 	# say goodbye
 	print('Thanks for Playing!');
@@ -517,11 +523,11 @@ Example:
 	block_symbols = {
 		'start' : u'O',
 		'end' : u'X',
-		'wall_v' : u'█',
-		'wall_h' : u'█',
-		'wall_c' : u'█',
-		'head' : u'█',
-		'tail' : u'█',
+		'wall_v' : u'\u2588',
+		'wall_h' : u'\u2588',
+		'wall_c' : u'\u2588',
+		'head' : u'\u2588',
+		'tail' : u'\u2588',
 		'wall_color' : Maze.COLOR_BLUE,
 		'head_color' : Maze.COLOR_RED,
 		'tail_color' : Maze.COLOR_CYAN,
