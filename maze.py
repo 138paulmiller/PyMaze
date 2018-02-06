@@ -3,11 +3,11 @@
 '''
 Random Maze Generator
 Makes use of a radomized version of Kruskal's Minimum Spanning Tree (MST) 
-algorithm to generate a random ASCII maze!
-@author: Paul Miller (github.com/138paulmiller)
+algorithm to generate a randomized mazes!
+	@author: Paul Miller (github.com/138paulmiller)
 '''
 
-import os, sys, random, math
+import os, sys, random, time, threading
 # defined in disjointSet.py
 import disjointSet as ds
 
@@ -19,26 +19,6 @@ class Maze:
 	DOWN = (0, 1)
 	LEFT = (-1, 0)
 	RIGHT = (1,0)
-	# defalt ANSI settings from user
-	COLOR_DEFAULT = u'\u001b[0m'
-	# foreground colors (text)
-	COLOR_BLACK = u'\u001b[30m'
-	COLOR_RED =  u'\u001b[31m'
-	COLOR_GREEN = u'\u001b[32m'
-	COLOR_YELLOW = u'\u001b[33m'
-	COLOR_BLUE  =u'\u001b[34m'
-	COLOR_MAGENTA = u'\u001b[35m'
-	COLOR_CYAN = u'\u001b[36m'
-	COLOR_WHITE = u'\u001b[37m'
-	# background colors 
-	COLOR_BG_BLACK = u'\u001b[40m'
-	COLOR_BG_RED =  u'\u001b[41m'
-	COLOR_BG_GREEN =  u'\u001b[42m'
-	COLOR_BG_YELLOW = u'\u001b[43m'
-	COLOR_BG_BLUE = u'\u001b[44m'
-	COLOR_BG_MAGENTA =  u'\u001b[45m'
-	COLOR_BG_CYAN = u'\u001b[46m'
-	COLOR_BG_WHITE= u'\u001b[47m'
 
 	def __init__(self, width, height, seed, symbols=None):
 		'''
@@ -57,10 +37,13 @@ class Maze:
 			Maze	: constructed object
 		'''
 		assert width > 0; assert height > 0
+		self.init_symbols(symbols)
+		self.time_taken = False
+		self.timer_thread = threading.Thread(target=self.timer_job)
+		self.is_moving = True # used as a semaphore for the update time thread
 		self.width = width
 		self.height = height
 		self.seed = seed
-		self.init_symbols(symbols)
 		self.path = [] # current path taken
 		self.player = (0,0) # players position
 		# self.items = [(x,y)] #TODO?? Add a list of possible items to collect for points?
@@ -95,8 +78,7 @@ class Maze:
 
 	def to_str(self):
 		'''
-		Defines the string representaion of the maze.
-		If ansi is True, this string will contain the path symbols, otherwise it will not
+		Defines the string representation of the maze.
 		@return
 			Maze	: constructed object
 		'''	
@@ -111,79 +93,32 @@ class Maze:
 			if row == 0:
 				s+=self.wall_v + self.start
 			else:
-				s+=self.wall_v
-				if not self.ansi:
-					# else draw o for vertical moves in path
-					if (0, row) in self.path:
-						s+=self.tail
-					# or # to denote player pos
-					elif (0, row) == self.player:
-						s+=self.head
-					# or empty
-					else:
-						s+=self.empty
-				else:
-					s+=self.empty	
+				s+=self.wall_v + self.empty	
 	
 			# draw | if no portal between [row][col] and [row][col-1]	
 			for col in range(1, self.width): 	
-				# if edge to the left
-				key = (col, row)
-				left_key = (col-1, row)
-				#initially draw wall				
-				c = self.wall_v
-				#check for portal between [a][b] or [b][a]	
-				if left_key in self.portals[key] or \
-					key in self.portals[left_key]:
-					c = self.empty
+				# if  theres a portal between cell and left cell
+				if self.grid[col-1][row] in self.portals[self.grid[col][row]]:
 					# if portal remove wall
-					# ansi if portal is inbetween paths, color  as tail
-					if not self.ansi and \
-						((col, row) in self.path and (col-1, row) in self.path) or\
-						((col-1, row) in self.path and (col, row) == self.player) or\
-						((col, row) in self.path and (col-1, row) == self.player)   :
-						c = self.tail
-
-					else:
-						c = self.empty
-				# if at [width-1][height-1] draw end marker
+					c = self.empty
+				else:
+					# if not portal draw vertical wall
+					c = self.wall_v
+				# if at [width-1][height-1] draw end marker or cell
 				if row == self.height-1 and col == self.width-1:
 					c += self.end	
-				else: # draw path or player marker if if
-					if not self.ansi:
-						# any in path draw o for horizontal moves in path
-						if (col, row) in self.path:	
-							c+=self.tail
-						# or # to denote player pos
-						elif (col,row) == self.player:
-							c+=self.head
-						else:
-							c += self.empty
-					else:
-						c += self.empty
-					
+				else: # draw cell
+					c += self.empty				
 				s += c 	
 			s+=self.wall_v +'\n'
-			# draw - if not portal between [row][col] and [row-1][col]
+			# draw - if not portal between [row][col] and [row+1][col]
 			for col in range(0, self.width):
-				# if edge below (relative to view, so really above)
+				# if edge above (visually below)
 				c =self.wall_h
-				key = (col, row)	
-				if row+1 < self.height:
-					down_key = (col, row+1)		
-					if down_key in self.portals[key] or\
-						key in self.portals[down_key]:
-						#if not ansi
-						# if portal is inbetween paths, color  as tail
-						if not self.ansi and\
-							((col, row) in self.path and (col, row+1) in self.path) or\
-							((col, row+1) in self.path and (col, row) == self.player) or\
-							((col, row) in self.path and (col, row+1) == self.player)   :
-							c = self.tail
-						else:
-							c = self.empty
-		
-			
+				key = self.grid[col][row]	
+				# if not at last row, and theres a portal between cell and above cell
+				if row+1 < self.height and self.grid[col][row+1] in self.portals[key]:
+						c = self.empty
 				s+=self.wall_c + c
 			s+=self.wall_c +'\n'
 		s+=self.empty
@@ -206,49 +141,35 @@ class Maze:
 		return s
 
 	def init_symbols(self, symbols):
-		# if custom symbols
-		if symbols:
-
-			#get symbol colors _color + bg_color
-			start_color = symbols['start_color'] if 'start_color' in symbols else ''
-			start_bg_color = symbols['start_bg_color'] if 'start_bg_color' in symbols else ''
-
-			end_color = symbols['end_color'] if 'end_color' in symbols else ''
-			end_bg_color = symbols['end_bg_color'] if 'end_bg_color' in symbols else ''
-
-			wall_color = symbols['wall_color'] if 'wall_color' in symbols else ''
-			wall_bg_color=symbols['wall_bg_color'] if 'wall_bg_color' in symbols else''
-			
-			head_color = symbols['head_color'] if 'head_color' in symbols else ''
-			head_bg_color=symbols['head_bg_color'] if 'head_bg_color' in symbols else ''
-
-			tail_color = symbols['tail_color'] if 'tail_color' in symbols else self.COLOR_DEFAULT
-			tail_bg_color = symbols['tail_bg_color'] if 'tail_bg_color' in symbols else self.COLOR_DEFAULT
-
+		#get symbol colors _color + bg_color
 		
-			# symbol colors
-			self.ansi = True
-			self.start = start_bg_color	+ start_color 	+ symbols['start']
-			self.end =  end_bg_color 	+ end_color 	+ symbols['end']    
-			self.wall_h = wall_bg_color	+ wall_color 	+ symbols['wall_h'] 
-			self.wall_v = wall_bg_color	+ wall_color 	+ symbols['wall_v'] 
-			self.wall_c = wall_bg_color	+ wall_color 	+ symbols['wall_c'] 
-			self.head = head_bg_color 	+ head_color 	+ symbols['head']   
-			self.tail = tail_bg_color 	+ tail_color 	+ symbols['tail']   
-			self.empty = self.COLOR_DEFAULT+' '
-		else:
-			#not ansi
-			self.ansi = False
-			# default symbols
-			self.start = 'S'
-			self.end = 'X'
-			self.wall_v  = '|'
-			self.wall_h = '-'
-			self.wall_c = '+'
-			self.head =  '#'
-			self.tail = 'o'	
-			self.empty = ' '	
+		start_color = symbols['start_color'] if 'start_color' in symbols else ''
+		start_bg_color = symbols['start_bg_color'] if 'start_bg_color' in symbols else ''
 
+		end_color = symbols['end_color'] if 'end_color' in symbols else ''
+		end_bg_color = symbols['end_bg_color'] if 'end_bg_color' in symbols else ''
+
+		wall_color = symbols['wall_color'] if 'wall_color' in symbols else ''
+		wall_bg_color=symbols['wall_bg_color'] if 'wall_bg_color' in symbols else''
+		
+		head_color = symbols['head_color'] if 'head_color' in symbols else ''
+		head_bg_color=symbols['head_bg_color'] if 'head_bg_color' in symbols else ''
+
+		tail_color = symbols['tail_color'] if 'tail_color' in symbols else ''
+		tail_bg_color = symbols['tail_bg_color'] if 'tail_bg_color' in symbols else ''
+
+		empty_color = symbols['empty_color'] if 'empty_color' in symbols else ''
+
+		# symbol colors
+		self.start = start_bg_color	+ start_color 	+ symbols['start'] 
+		self.end =  end_bg_color 	+ end_color 	+ symbols['end']    + empty_color
+		self.wall_h = wall_bg_color	+ wall_color 	+ symbols['wall_h'] 
+		self.wall_v = wall_bg_color	+ wall_color 	+ symbols['wall_v'] 
+		self.wall_c = wall_bg_color	+ wall_color 	+ symbols['wall_c'] 
+		self.head = head_bg_color 	+ head_color 	+ symbols['head']   
+		self.tail = tail_bg_color 	+ tail_color 	+ symbols['tail']   
+		self.empty = empty_color+' '
+	
 	def kruskalize(self):
 		'''
 		Kruskal's algorithm, except when grabbing the next available edge, 
@@ -292,7 +213,7 @@ class Maze:
 		for row in range(0, self.height):
 			for col  in range(0,self.width):
 				# the key is the cells unique id
-				key = (col,row)
+				key = self.grid[col][row]
 				# create the singleton 
 				disjoint_set.make_set(key)
 				# intialize the keys portal dict
@@ -306,8 +227,8 @@ class Maze:
 			# get next edge ((row1, col1), (row2,col2))
 			edge = edges.pop()
 			# get the sets for each vertex in the edge
-			key_a = (edge[0][0], edge[0][1])
-			key_b = (edge[1][0], edge[1][1])
+			key_a = self.grid[edge[0][0]][edge[0][1]]
+			key_b = self.grid[edge[1][0]][edge[1][1]]
 			set_a = disjoint_set.find(key_a)
 			set_b = disjoint_set.find(key_b)
 			# if they are not in the same set they are not in the 
@@ -318,6 +239,7 @@ class Maze:
 				# [a][b] or [b][a]
 				edge_count+=1	
 				self.portals[key_a][key_b] = True 
+				self.portals[key_b][key_a] = True 
 				disjoint_set.union(set_a, set_b)
 
 	def move(self, direction):
@@ -331,57 +253,77 @@ class Maze:
 		'''
 		assert(direction in [self.LEFT, self.RIGHT, self.UP, self.DOWN])
 		# if new move is the same as last move pop from path onto player 
-		prev_player = self.player
 		new_move = (self.player[0]+direction[0],\
 					self.player[1]+direction[1]) 
+		valid = False
 		# if new move is not within grid
 		if new_move[0] < 0 or new_move[0] >= self.width or\
 			new_move[1] < 0 or new_move[1] >= self.height:
-			return 
-		#if theres a portal between player and newmove
-		# player_key = self.player[1] + self.player[0]		
-		# move_key = new_move[1] + new_move[0]	
-		# if ansi move cursor, prevents refresh flicker from large ANSI escaped string generated from to_str
-		#'\033[%d;%dH' % (y x)# move cursor to y, x
- 		
-		if new_move in self.portals[self.player] or\
-			self.player in self.portals[new_move]: 
-			portal = (self.player, new_move)\
-					 if new_move in self.portals[self.player] else (new_move, self.player)
+			return valid
+		player_key = self.width*self.player[1] + self.player[0]		
+		move_key = self.width*new_move[1] + new_move[0]	
+ 		#if theres a portal between player and newmove
+		if move_key in self.portals[player_key]:
+			self.is_moving = True
+			#'\033[%d;%dH' % (y x)# move cursor to y, x
+			head = '\033[%d;%dH' % (new_move[1]*2+2, new_move[0]*2+2)  + self.head
+			# uncolor edge between (edge is between newmove and player)
+			edge = '\033[%d;%dH' %  (self.player[1]*2+(new_move[1]-self.player[1])+2,\
+									self.player[0]*2+(new_move[0]-self.player[0])+2)
+			tail = '\033[%d;%dH' % (self.player[1]*2+2, self.player[0]*2+2) 
+			end = '\033[%d;%dH' % ((self.height)*2+2, 0) +self.empty
+			# if new move is backtracking to last move then sets player pos to top of path and remove path top
 			if len(self.path) > 0 and new_move == self.path[-1]:
+				# move cursor to player and color tail, move cursor to player and color empty
 				self.player = self.path.pop()
-				# color head to empty and path top to head
-				if self.ansi:		
-					# move cursor to player and color tail, move cursor to player and color empty
-					head = '\033[%d;%dH' % (new_move[1]*2+2, new_move[0]*2+2) + self.head
-					# uncolor edge between
-					#edge = '\033[%d;%dH' % ((portal[1][1]+portal[0][1])/2*2+2, (portal[1][0]+portal[0][0])/2*2+2) + self.empty
-					edge = '\033[%d;%dH' %  (prev_player[1]*2+(new_move[1]-prev_player[1])+2,\
-											prev_player[0]*2+(new_move[0]-prev_player[0])+2) + self.empty
-
-					tail = '\033[%d;%dH' % (prev_player[1]*2+2, prev_player[0]*2+2) + self.empty
-
-					end = '\033[%d;%dH' % (self.height*2+2, 0) + self.empty
+				# move cursor to player and color tail, move cursor to player and color empty
+				# uncolor edge between and remove tail
+				edge += self.empty
+				tail += self.empty
+			# else move progresses path, draws forward and adds move to path
 			else:
 				self.path.append(self.player)
 				self.player = new_move
 				#move cursor to position to draw if ANSI
-				if self.ansi:
-					# ANSI escaped command moves cursor to  row y, column x
-					head = '\033[%d;%dH' % (new_move[1]*2+2,  new_move[0]*2+2)+ self.head
-					tail = '\033[%d;%dH' % (prev_player[1]*2+2, prev_player[0]*2+2) + self.tail
-					# color edge between
-					#edge = '\033[%d;%dH' % ((portal[1][1]+portal[0][1])/2*2+2, (portal[1][0]+portal[0][0])/2*2+2) + self.tail
-					edge = '\033[%d;%dH' %  (prev_player[1]*2+(new_move[1]-prev_player[1])+2,\
-											prev_player[0]*2+(new_move[0]-prev_player[0])+2) + self.tail
-
-					end = '\033[%d;%dH' % (self.height*2+2, 0) + self.empty
-					
-			if self.ansi:
-				sys.stdout.write(head+edge+tail+end)
-				sys.stdout.flush()
-					
+				# color edge between and color tail
+				edge += self.tail
+				tail += self.tail					
+			# use write and flush to ensure buffer is emptied completely to avoid flicker
+			sys.stdout.write(head+edge+tail+end)
+			sys.stdout.flush()
+			self.is_moving = False 
+			valid = True # successfully moved between portals
+		return valid
 	
+	def start_timer(self):
+		self.is_moving = False
+		self.timer_thread.start() 
+
+	def kill_timer(self):
+		self.player = (self.width-1, self.height-1)
+		self.timer_thread.join()
+
+	def end_timer(self):
+		self.timer_thread.join()
+		return self.time_taken
+
+	def timer_job(self):
+		start_time = time.time()
+		# your code
+		# prints the current time at the bottom of the maze 
+		while not self.is_done():
+			# if not currently writing move, print time at bottom
+			if not self.is_moving: 
+				time_elapsed = time.time() - start_time
+				# delay on the update rate (only update every 10th of a second)
+				if time_elapsed -self.time_taken > 0.01: 
+					self.time_taken = time_elapsed 
+					# use write and flush to ensure buffer is emptied completely to avoid flicker
+					sys.stdout.write('\033[%d;%dHTime:%.2f' % (self.height*2+2, 0, self.time_taken))
+					sys.stdout.flush()
+			
+		self.time_taken = time.time() - start_time
+
 	def is_done(self):
 		'''
 		Used to indicate of the player has completed the maze
@@ -391,200 +333,3 @@ class Maze:
 			True if player has reached the end
 		'''
 		return self.player == (self.width-1, self.height-1)
-
-	
-def getchar():
-	# Determine which getchar method to use
-	if os.name!='nt':
-		# import unix terminal interface
-		import termios, tty
-		# get stdin file descriptor 
-		file_desc = sys.stdin.fileno()
-		# get stdin file settings
-		settings = termios.tcgetattr(file_desc)
-		try:
-			# set tty to read raw input (unbuffered)
-			# modifies settings
-			tty.setraw(file_desc)
-			# read a single byte 
-			char = sys.stdin.read(1)
-		finally:
-			# set the stdin settings back to before raw modification
-			termios.tcsetattr(file_desc, termios.TCSADRAIN, settings)
-	# use windows getchar
-	else:
-		import msvcrt
-		char = msvcrt.getch()
-	return char
-
-def save_maze(maze, out_filename):        
-	#write the maze to a text file
-	out_file = open(out_filename+'_maze.txt', 'w')	
-	out_file.write(maze.to_str())
-	out_file.close()
-
-	# write the portals to a textfile
-	out_file= open(out_filename +'_portals.txt', 'w')
-	out_file.write( maze.portals_str())
-	out_file.close()
-
-
-	
-def play_maze(maze):
-	quit_key = ord('q')
-	up_key = lambda key: key == ord('w') or key == ord('A')
-	down_key = lambda key: key == ord('s') or key == ord('B')
-	right_key = lambda key: key == ord('d') or key == ord('C')
-	left_key = lambda key: key == ord('a') or  key == ord('D')
-
-	#clear the screen clear if linux, cls if windows
-	os.system('clear' if os.name!='nt' else 'cls')	
-	print(r'''
-#######  ##    ## ##     ##    ###    ########  ######## 
-##    ##  ##  ##  ###   ###   ## ##        ##   ##       
-##    ##   ####   #### ####  ##   ##      ##    ######       
-#######     ##    ## ### ## #########    ##     ##
-##          ##    ##     ## ##     ##   ##      ##       
-##          ##    ##     ## ##     ##  ######## ########                                      
-Controls:
-	WASD	- To navigate (or Arrow Keys on Linux)
-	q	- To give up (or ESC on Linux)
-
-Press any key to start!
-	''')
-	getchar()
-	os.system('clear' if os.name!='nt' else 'cls')	
-	print(maze.to_str())
-	move = 0
-	# exit when either ESC or q are entered
-	while move != quit_key and not maze.is_done():
-	# get the integer value of character input 
-		move = ord(getchar())
-		# update maze based on input
-		if up_key(move):
-			maze.move(Maze.UP)
-		elif down_key(move):
-			maze.move(Maze.DOWN)
-		elif right_key(move):
-			maze.move(Maze.RIGHT)
-		elif left_key(move):
-			maze.move(Maze.LEFT)	
-		if not maze.ansi: #only refresh entire maze if not ansi
-			os.system('clear' if os.name!='nt' else 'cls')
-			print(maze.to_str())
-
-	# say goodbye
-	print('Thanks for Playing!');
-		
-
-def error(msg):
-	print(msg+'\nTry \'./maze -help\' for information\n')
-	sys.exit(-1) 
-
-# move throwaway function to parse argument
-def parse_arg(option, argv, i, arg_type) :
-    #expect integer
-	try:
-		return arg_type(argv[i])
-	except ValueError:
-		error('\nError: Invalid argument type for option: '+ str(option))
-	except IndexError:
-		error('\nError: Missing argument for option: '+str(option))
-
-
-def main():
-	usage = \
-	r'''
-PyMaze github.com/138paulmiller
-	./maze.py -[OPTION=ARG]*
-Options:
-	-width COL	Sets the maze width (number of columns) to COL (Must be greater than 0). default is 15
-	-height ROW	Sets the maze height (number of rows) to ROW (Must be greater than 0). Default is 15
-	-seed SEED	Sets Random Number Generator's seed to SEED.  Default seed is random
-	-out NAME	Sets output file prefix to NAME, default is seed number		
-	-interactive	Starts CLI maze game. Does not save to file	
-	-block	Print maze using Unicode block characters and ANSI style coloring, only works with interactive mode	
-	-help	Prints this menu
-Example:
-	The following generates two files, MyMaze_maze.txt and MyMaze_portals.txt, which contain a 50x45 maze with a random seed of 13.1 
-		./maze.pys -width 50 -height 45 -seed 13.1 -out MyMaze
-	This will start the interactive maze in the terminal 	
-		./maze.py -interactive	
-	'''	
-	argv = sys.argv
-	argc = len(argv)
-
-	# set option defaults
-	seed = random.random()*10000		
-	width = 15
-	height = 15 
-	interactive = False
-
-	block_symbols = {
-		'start' : u'O',
-		'end' : u'X',
-		'wall_v' : u'\u2588',
-		'wall_h' : u'\u2588',
-		'wall_c' : u'\u2588',
-		'head' : u'\u2588',
-		'tail' : u'\u2588',
-		'wall_color' : Maze.COLOR_BLUE,
-		'head_color' : Maze.COLOR_RED,
-		'tail_color' : Maze.COLOR_CYAN,
-		'start_bg_color' : Maze.COLOR_BG_YELLOW,
-		'end_bg_color' : Maze.COLOR_BG_YELLOW
-	}
-	symbols = None
-	out_filename_default = 'mazes/%08.3f'% seed
-	out_filename = out_filename_default # default file names is in mazes dir and seed used
-	#parse arguments not including script path
-	i = 1	
-	while i < argc:
-		option = argv[i]
-		i+=1 # next option
-		if option == '-width':
-			width = parse_arg( '-width', argv, i, int)
-			if width <= 0:
-				error('Invalid argument: width must be a positive integer')
-
-			i+=1 # eat next arg
-		elif option == '-height':
-			height = parse_arg('-height', argv, i, int)
-			if height <= 0:
-				error('Invalid argument: width must be a positive integer')
-			i+=1 # eat next arg
-		elif option == '-seed':
-			seed = parse_arg('-seed', argv, i, float)
-			# reevaluate name
-			out_filename = 'mazes/%08.3f'% seed 
-			i+=1 # eat next arg
-		elif option == '-out':
-			out_filename = parse_arg('-out', argv, i, str)
-			i+=1 # eat next arg
-		elif option == '-interactive':
-			interactive = True
-		elif option == '-block':
-			symbols = block_symbols
-		elif option == '-help':
-			print(usage)
-			sys.exit(-1) 		
-		else:
-			error('Invalid option: ' + option )	
-			
-	#create the maze
-	maze = Maze(width, height, seed, symbols)
-	# activate a repl-like command interpreter to try to solve the maze 
-	if interactive:
-		if out_filename_default != out_filename:		
-			error('Error: Output file NOT compatible with interactive mode')	
-		else:
-			play_maze(maze)
-	else:
-		# if using block symbols and printing to file print error
-		if symbols:		
-			error('Error: Block mode only compatible with interactive mode')	
-		else:
-			save_maze(maze, out_filename)
-			
-if __name__ == '__main__':
-	main() 
