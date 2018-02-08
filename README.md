@@ -9,12 +9,14 @@ To create a randomly generated maze execute
 
 	python3 pymaze.py
 
-Or if on linux, the script can invoked be the default python3 interpreter.
+Or the script can invoked be the default environment python3 interpreter.
 
 	./pymaze.py
 
 
-	./maze.py -[OPTION=ARG]*
+
+
+	./pymaze.py -[OPTION=ARG]*
 	Options:
 		-width COL	Sets the maze width (number of columns) to COL (Must be greater than 0). Default is 20
 		-height ROW	Sets the maze height (number of rows) to ROW (Must be greater than 0). Default is 12
@@ -23,6 +25,7 @@ Or if on linux, the script can invoked be the default python3 interpreter.
 		-interactive	Starts CLI maze game. Does not save to file	
 		-block	Print maze using Unicode block characters, only works with interactive mode	
 		-color	Print maze using ANSI style coloring, only works with interactive mode	
+		-solve	Displays the solution to the maze in real-time, only works with interactive mode
 		-help	Prints this menu
 
 ## Examples
@@ -101,10 +104,18 @@ Also, if the maze is larger than the terminal please quit and either resize the 
 
 	python3 pymaze.py -interactive -block -color -width 20 -height 15
 
-![](demo.gif)
+![](res/demo_game.gif)
+
+#### Solution
+A solution to the maze can be solved in interactive mode in real-time with the -solve option. This option only works in interactive mode as of now since it tries multiple moves and selects a path using a backtracking algorithm. The following command is demonstrated below and will run without the -color and -block options if neither is supported.
+
+   	python3 pymaze.py -interactive -solve -width 35 -height 20 -block -color
+
+![](res/demo_solve.gif)
+
 
 ### Unaligned Output
-This program relies on the users font to be monospaced, this holds true whether the maze is being viewed in the terminal or in a text editor. Try 
+This program relies on the users font to be monospaced, this holds true whether the maze is being viewed in the terminal or in a text editor. 
 
 ### Garbled Output
 

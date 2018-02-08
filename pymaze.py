@@ -21,7 +21,7 @@ COLOR_CYAN = u'\u001b[36m'
 COLOR_WHITE = u'\u001b[37m'
 # background colors 
 COLOR_BG_BLACK = u'\u001b[40m'
-COLOR_BG_RED =  u'\u001b[41m'
+COLOR_BG_RED =	u'\u001b[41m'
 COLOR_BG_GREEN =  u'\u001b[42m'
 COLOR_BG_YELLOW = u'\u001b[43m'
 COLOR_BG_BLUE = u'\u001b[44m'
@@ -53,7 +53,7 @@ def getchar():
 		char = msvcrt.getch()
 	return char
 
-def save_maze(maze, out_filename):        
+def save_maze(maze, out_filename):	  
 	#write the maze to a text file
 	out_file = open(out_filename+'_maze.txt', 'w')	
 	out_file.write(maze.to_str())
@@ -76,12 +76,12 @@ def play_maze(maze_obj):
 	#clear the screen clear if linux, cls if windows
 	os.system('clear' if os.name!='nt' else 'cls')	
 	print(r'''
-#######  ##    ## ##     ##    ###    ########  ######## 
-##    ##  ##  ##  ###   ###   ## ##        ##   ##       
-##    ##   ####   #### ####  ##   ##      ##    ######       
-#######     ##    ## ### ## #########    ##     ##
-##          ##    ##     ## ##     ##   ##      ##       
-##          ##    ##     ## ##     ##  ######## ########                                      
+#######  ##    ## ##	 ##    ###    ########	######## 
+##    ##  ##  ##  ###	###   ## ##	   ##	##	 
+##    ##   ####   #### ####  ##   ##	  ##	######	     
+#######     ##	  ## ### ## #########	 ##	##
+##	    ##	  ##	 ## ##	   ##	##	##	 
+##	    ##	  ##	 ## ##	   ##  ######## ########				      
 Controls:
 	WASD	- To navigate (or Arrow Keys on Linux)
 	x	- To give up 
@@ -116,7 +116,14 @@ Press any key to start!
 		print('Solved in %f seconds!' % maze_obj.end_timer())
 	print('Thanks for Playing!');
 		
-
+def solve_maze(maze_obj):
+	os.system('clear' if os.name!='nt' else 'cls')
+	print(maze_obj.to_str())
+	print('Press any key to see solve!')
+	getchar();
+	maze_obj.start_timer()
+	maze_obj.solve()	
+	print('Solved in %f seconds!' % maze_obj.end_timer())
 
 def error(msg):
 	print(msg+'\nTry \'./maze -help\' for information\n')
@@ -137,7 +144,7 @@ def main():
 	usage = \
 	r'''
 PyMaze github.com/138paulmiller
-	./maze.py -[OPTION=ARG]*
+	./pymaze.py -[OPTION=ARG]*
 Options:
 	-width COL	Sets the maze width (number of columns) to COL (Must be greater than 0). Default is 20
 	-height ROW	Sets the maze height (number of rows) to ROW (Must be greater than 0). Default is 12
@@ -146,11 +153,12 @@ Options:
 	-interactive	Starts CLI maze game. Does not save to file	
 	-block	Print maze using Unicode block characters, only works with interactive mode	
 	-color	Print maze using ANSI style coloring, only works with interactive mode	
+	-solve	Displays the solution to the maze in real-time, only works with interactive mode
 	-help	Prints this menu
 Example:
 	The following generates two files, MyMaze_maze.txt and MyMaze_portals.txt, which contain a 50x45 maze with a random seed of 13.1 
 		./maze.pys -width 50 -height 45 -seed 13.1 -out MyMaze
-	This will start the interactive maze in the terminal 	
+	This will start the interactive maze in the terminal	
 		./maze.py -interactive	
 	'''	
 
@@ -195,6 +203,7 @@ Example:
 	output_to_file = False
 	is_color = False
 	is_block= False
+	is_solve = False
 	out_filename = None # default file names is in mazes dir and seed used
 	#parse arguments not including script path
 	i = 1	
@@ -229,9 +238,13 @@ Example:
 		elif option == '-color':
 			symbols.update(color_symbols)
 			is_color = True
+		elif option == '-solve':
+
+			interactive = True
+			is_solve = True
 		elif option == '-help':
 			print(usage)
-			sys.exit(-1) 		
+			sys.exit(-1)		
 		else:
 			error('Invalid option: ' + option )	
 			
@@ -241,6 +254,8 @@ Example:
 	if interactive:
 		if output_to_file:		
 			error('Error: Output mode NOT compatible with interactive mode')	
+		if is_solve:
+			solve_maze(maze_obj)
 		else:
 			play_maze(maze_obj)
 	else:
@@ -249,10 +264,14 @@ Example:
 			if is_color:		
 				error('Error: Ansi Color mode is NOT compatible with output mode')	
 			elif is_block:		
-				error('Error: Block mode is NOT compatible with output mode')	
+				error('Error: Unicode Block mode is NOT compatible with output mode')	
+			elif is_solve:		
+				error('Error: Solution is NOT compatible with output mode')
 			else:
 				save_maze(maze_obj, out_filename)
 		else:
+			if is_solve:		
+				error('Error: Solution must be invoke in interactive mode')
 			# print to standard output
 			os.system('clear' if os.name!='nt' else 'cls')	
 			print(maze_obj.to_str())

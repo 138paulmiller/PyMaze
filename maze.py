@@ -280,6 +280,7 @@ class Maze:
 				# uncolor edge between and remove tail
 				edge += self.empty
 				tail += self.empty
+				valid = False # moved back
 			# else move progresses path, draws forward and adds move to path
 			else:
 				self.path.append(self.player)
@@ -288,13 +289,35 @@ class Maze:
 				# color edge between and color tail
 				edge += self.tail
 				tail += self.tail					
+				valid = True # successfully moved forward between portals
+
 			# use write and flush to ensure buffer is emptied completely to avoid flicker
 			sys.stdout.write(head+edge+tail+end)
 			sys.stdout.flush()
 			self.is_moving = False 
-			valid = True # successfully moved between portals
 		return valid
 	
+
+
+	def solve(self, position=(0,0)):
+		''' Use real-time backtracking to solve maze TODO : Add hueristics'''
+		if self.is_done():
+			return  True
+		for direction in [self.LEFT, self.RIGHT, self.UP, self.DOWN]:
+				# try a move, move will return false if no portal of backward progress			
+				if self.move(direction):
+					# after move, set new test position to be current player position
+					if self.solve(self.player):
+						return True
+				# if position changed 
+				if position != self.player: 
+					# move back from towards previos position
+					self.move((position[0]-self.player[0], position[1]-self.player[1]))
+
+		return False
+
+
+
 	def start_timer(self):
 		self.is_moving = False
 		self.timer_thread.start() 
