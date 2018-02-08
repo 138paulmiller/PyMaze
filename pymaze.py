@@ -117,13 +117,23 @@ Press any key to start!
 	print('Thanks for Playing!');
 		
 def solve_maze(maze_obj):
+	# print('Press any key to see solution!')
+	# getchar();
+	# os.system('clear' if os.name!='nt' else 'cls')
+	# print(maze_obj.to_str())
+	# maze_obj.start_timer()
+	# maze_obj.solve()	
+	# print('\nSolved in %f seconds!' % maze_obj.end_timer())
+	
+	maze_obj.player = (0,0)
+
+	print('Press any key to see heuristic solution!')
+	getchar();
 	os.system('clear' if os.name!='nt' else 'cls')
 	print(maze_obj.to_str())
-	print('Press any key to see solve!')
-	getchar();
 	maze_obj.start_timer()
-	maze_obj.solve()	
-	print('Solved in %f seconds!' % maze_obj.end_timer())
+	maze_obj.heuristic_solve()	
+	print('Solved in %f seconds!' % maze_obj.end_timer()+'\n')
 
 def error(msg):
 	print(msg+'\nTry \'./maze -help\' for information\n')

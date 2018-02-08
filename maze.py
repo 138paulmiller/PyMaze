@@ -39,7 +39,7 @@ class Maze:
 		assert width > 0; assert height > 0
 		self.init_symbols(symbols)
 		self.time_taken = False
-		self.timer_thread = threading.Thread(target=self.timer_job)
+		self.timer_thread = None
 		self.is_moving = True # used as a semaphore for the update time thread
 		self.width = width
 		self.height = height
@@ -300,7 +300,7 @@ class Maze:
 
 
 	def solve(self, position=(0,0)):
-		''' Use real-time backtracking to solve maze TODO : Add hueristics'''
+		''' Uses backtracking to solve maze'''
 		if self.is_done():
 			return  True
 		for direction in [self.LEFT, self.RIGHT, self.UP, self.DOWN]:
@@ -317,17 +317,48 @@ class Maze:
 		return False
 
 
+	def heuristic_solve(self, position=(0,0), depth=0, lookahead=10):
+		''' Use backtracking with iterative deepening to solve maze with a distance or randomized choice heuristic'''
+		if self.is_done():
+			return  True
+		if depth > 0:
+			directions = [self.LEFT, self.RIGHT, self.UP, self.DOWN]
+			# sort by distance towards the end dist 0 is closest so ascending order
+			#heuristic
+			directions.sort(
+				#get manhatten distance
+				#key=lambda direction: (self.width-self.player[0]+direction[0]-1+self.height-self.player[1]+direction[1]-1)/2.0
+				#random
+				key=lambda direction: random.random()
+				)
+			for direction in directions:
+					# try a move, move will return false if no portal of backward progress			
+					if self.move(direction):
+						# after move, set new test position to be current player position
+						if self.heuristic_solve(self.player, depth-1,lookahead):
+							return True
+					# if position changed 
+					if position != self.player: 
+						# move back from towards previos position
+						self.move((position[0]-self.player[0], position[1]-self.player[1]))
+			return False
+		else:
+			return self.heuristic_solve(self.player, lookahead, lookahead+1)
+
+
 
 	def start_timer(self):
 		self.is_moving = False
+		self.timer_thread = threading.Thread(target=self.timer_job)
 		self.timer_thread.start() 
 
 	def kill_timer(self):
 		self.player = (self.width-1, self.height-1)
-		self.timer_thread.join()
+		if self.timer_thread != None:
+			self.timer_thread.join()
 
 	def end_timer(self):
-		self.timer_thread.join()
+		self.kill_timer()
 		return self.time_taken
 
 	def timer_job(self):
