@@ -1,7 +1,7 @@
 ﻿# PyMaze
 ## About
 This program provides a quick and easy solution to your maze-deficiency issues. There are generally two use cases for this program, to generate a file containing a maze to solve or to start an interactive maze game within your favorite terminal. Have fun!
-It is recommended that to properly see the maze a monospaced font is used. 
+_TERMINAL MUST USE A MONOSPACED FONT TO WORK PROPERLY_
 
 # Usage
 See the Details section for more details information about maze files and option details.
@@ -30,47 +30,14 @@ Or the script can invoked be the default environment python3 interpreter.
 
 ## Examples
 
+
 ### Output
-The following command outputs an ASCII representation of the Maze to STDOUT, which is 15x10 dimension maze with a random seed of 91.1  
-
-	python3 pymaze.py -width 15 -height 10 -seed 91.1 
-	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	|S| | |         |   |     |   |
-	+ + + + +-+ +-+-+ +-+-+ + +-+ +
-	|   |   |     |       | |     |
-	+-+ +-+-+ +-+-+-+-+ +-+ +-+-+ +
-	|               |   | |     | |
-	+ +-+-+-+ +-+ +-+ + + + +-+-+ +
-	|   | |   |   | | |   | |   | |
-	+-+-+ + + +-+ + + +-+-+ +-+ +-+
-	|   |   | | | |       |       |
-	+ +-+-+-+ + + +-+ +-+ + +-+-+-+
-	|         |       |           |
-	+-+-+ +-+ + +-+-+-+-+-+ +-+ +-+
-	| |     | |     |       |     |
-	+ +-+ + +-+-+-+-+ + +-+ +-+-+-+
-	|     | |     |   |   | | |   |
-	+-+ + + +-+ + +-+-+-+ +-+ +-+ +
-	|   | |   | | |   |   | |     |
-	+-+-+-+ +-+ +-+ +-+-+ + + + + +
-	|           |             | |X|
-	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-The above command can be run multiple times and the same maze will be output, to generate a random maze do not specify the seed value. The following command will generate a new 12x8 dimension maze each run.
-
-	python3 pymaze.py -width 12 -height 8 
-
 
 If your terminal is Unicode and ANSI compatible, the following command will genarate a Unicode and colored representation of the maze. 
 
 	python3 pymaze.py -width 34 -height 12 -block -color
 
 ![](res/demo_block.png)
-
-### Output to File
-The following command generates two files, MyMaze_maze.txt and MyMaze_portals.txt, which contain a 50x45 dimension maze with a random seed of 13.1 
-
-	python3 pymaze.py -width 50 -height 45 -seed 13.1 -out MyMaze
 
 
 ### Interactive Mode
@@ -118,7 +85,6 @@ The height of the maze refers to number of rows in the maze.
 ## Portals
 These files are used for debugging purposes and represent the edges of the maze's undirected graph structure. 
 The _portals.txt is a list of 2D coordinates. Each coordinate is a pair of cell identifiers and if a pair exists, an edge between the cells exists. These edges are referred to as portals since the player may move between the two cells.
-
 
 Example on a 3x3 Maze
 	
